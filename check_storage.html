@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Check LocalStorage</title>
+</head>
+<body>
+    <h1>LocalStorage Data Check</h1>
+    <pre id="output"></pre>
+    <script>
+        const output = document.getElementById('output');
+        const transactions = localStorage.getItem('dimsum_transactions');
+        const products = localStorage.getItem('dimsum_products');
+        
+        output.textContent = 'TRANSACTIONS:\n' + 
+            (transactions ? JSON.stringify(JSON.parse(transactions), null, 2) : 'No transactions found') +
+            '\n\nPRODUCTS:\n' +
+            (products ? JSON.stringify(JSON.parse(products), null, 2) : 'No products found');
+    </script>
+</body>
+</html>

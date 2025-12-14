@@ -1,2 +1,4 @@
 onlyBuiltDependencies:
+  - '@metagptx/vite-plugin-source-locator'
+  - '@swc/core'
   - core-js
