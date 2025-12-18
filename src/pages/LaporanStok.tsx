@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Download, AlertTriangle, Package, TrendingDown, Search } from 'lucide-react';
 import { getStoredProducts, getStoredTransactions, getStoredPurchases } from '@/lib/storage';
+import { useBranch } from '@/contexts/BranchContext';
 import { KPICard } from '@/components/KPICard';
 import * as XLSX from 'xlsx';
 
@@ -18,6 +19,7 @@ interface Product {
   category: string;
   price: number;
   stock: number;
+  branchId?: string;
 }
 
 interface TransactionItem {
@@ -28,6 +30,7 @@ interface TransactionItem {
 interface Transaction {
   status: string;
   items?: TransactionItem[];
+  branchId?: string;
 }
 
 interface StockDataItem extends Product {
@@ -39,13 +42,34 @@ interface StockDataItem extends Product {
 }
 
 export default function LaporanStok() {
+  const { currentBranch } = useBranch();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [stockFilter, setStockFilter] = useState('all');
 
-  const products = getStoredProducts();
-  const salesTransactions = getStoredTransactions() as Transaction[];
-  const purchaseTransactions = getStoredPurchases() as Transaction[];
+  // Filter products by current branch
+  const products = useMemo(() => {
+    const allProducts = getStoredProducts();
+    return currentBranch 
+      ? allProducts.filter((p: Product) => p.branchId === currentBranch.id)
+      : allProducts;
+  }, [currentBranch]);
+
+  // Filter transactions by current branch
+  const salesTransactions = useMemo(() => {
+    const allTransactions = getStoredTransactions() as Transaction[];
+    return currentBranch
+      ? allTransactions.filter(t => t.branchId === currentBranch.id)
+      : allTransactions;
+  }, [currentBranch]);
+
+  // Filter purchases by current branch
+  const purchaseTransactions = useMemo(() => {
+    const allPurchases = getStoredPurchases() as Transaction[];
+    return currentBranch
+      ? allPurchases.filter(t => t.branchId === currentBranch.id)
+      : allPurchases;
+  }, [currentBranch]);
 
   // Calculate stock movements
   const stockData = useMemo(() => {
@@ -132,7 +156,8 @@ export default function LaporanStok() {
       'Terjual': item.sold,
       'Pembelian': item.purchased,
       'Turnover Rate (%)': item.turnoverRate,
-      'Status': item.status === 'low' ? 'Stok Rendah' : item.status === 'medium' ? 'Stok Sedang' : 'Stok Baik'
+      'Status': item.status === 'low' ? 'Stok Rendah' : item.status === 'medium' ? 'Stok Sedang' : 'Stok Baik',
+      'Cabang': currentBranch?.name || 'N/A'
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportData);
@@ -144,7 +169,14 @@ export default function LaporanStok() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Laporan Stok</h1>
+        <div>
+          <h1 className="text-3xl font-bold">Laporan Stok</h1>
+          {currentBranch && (
+            <p className="text-sm text-muted-foreground mt-1">
+              Cabang: {currentBranch.name}
+            </p>
+          )}
+        </div>
         <Button onClick={exportToExcel} className="gap-2">
           <Download className="h-4 w-4" />
           Export Excel

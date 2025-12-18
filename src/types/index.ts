@@ -10,6 +10,7 @@ export interface Product {
   stock: number;
   minStock?: number;
   description?: string;
+  branchId?: string;
 }
 
 export interface CartItem extends Product {
@@ -32,6 +33,7 @@ export interface Transaction {
   status?: 'completed' | 'pending' | 'cancelled';
   shiftId?: string;
   cashier?: string;
+  branchId?: string;
 }
 
 export interface OrderItem {
@@ -46,6 +48,7 @@ export interface User {
   name: string;
   role: 'admin' | 'cashier';
   isActive?: boolean;
+  assignedBranches?: string[];
 }
 
 export interface Purchase {
@@ -59,6 +62,7 @@ export interface Purchase {
   supplier: string;
   notes?: string;
   createdBy: string;
+  branchId?: string;
 }
 
 export interface Shift {
@@ -72,6 +76,7 @@ export interface Shift {
   totalSales?: number;
   status: 'active' | 'closed';
   shiftType?: 'pagi' | 'siang' | 'malam';
+  branchId?: string;
 }
 
 export interface OperationalCost {
@@ -82,6 +87,7 @@ export interface OperationalCost {
   amount: number;
   createdBy: string;
   timestamp: number;
+  branchId?: string;
 }
 
 export interface ActivityLog {
@@ -95,6 +101,7 @@ export interface ActivityLog {
   details: string;
   date?: string;
   category?: 'product' | 'transaction' | 'user' | 'shift' | 'purchase' | 'operational';
+  branchId?: string;
 }
 
 export interface StockHistory {
@@ -109,4 +116,5 @@ export interface StockHistory {
   userName: string;
   timestamp: number;
   date: string;
+  branchId?: string;
 }

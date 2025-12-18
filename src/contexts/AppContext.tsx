@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { Product, StockHistory, Transaction } from '@/types';
 import { getStoredProducts, setStoredProducts, getStoredTransactions } from '@/lib/storage';
+import { getDataByBranch } from '@/lib/branchStorage';
+import { useBranch } from './BranchContext';
 
 interface AppContextType {
   products: Product[];
@@ -12,6 +14,8 @@ interface AppContextType {
   getLowStockProducts: () => Product[];
   getOutOfStockProducts: () => Product[];
   getProductStockHistory: (productId: string) => StockHistory[];
+  getProductsByBranch: () => Product[];
+  getTransactionsByBranch: () => Transaction[];
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -22,6 +26,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [stockHistory, setStockHistory] = useState<StockHistory[]>([]);
+  const { currentBranch } = useBranch();
 
   const refreshProducts = useCallback(() => {
     const loadedProducts = getStoredProducts();
@@ -92,22 +97,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
       reason,
       userName,
       timestamp: Date.now(),
-      date: new Date().toISOString().split('T')[0]
+      date: new Date().toISOString().split('T')[0],
+      branchId: product.branchId
     };
 
     const updatedHistory = [historyEntry, ...stockHistory];
     saveStockHistory(updatedHistory);
   };
 
+  // Filter products by current branch
+  const getProductsByBranch = () => {
+    if (!currentBranch) return products;
+    return products.filter(p => p.branchId === currentBranch.id);
+  };
+
+  // Filter transactions by current branch
+  const getTransactionsByBranch = () => {
+    if (!currentBranch) return transactions;
+    return transactions.filter(t => t.branchId === currentBranch.id);
+  };
+
   const getLowStockProducts = () => {
-    return products.filter(p => {
+    const branchProducts = getProductsByBranch();
+    return branchProducts.filter(p => {
       const stock = p.stock || 0;
       return stock > 0 && stock < 10;
     });
   };
 
   const getOutOfStockProducts = () => {
-    return products.filter(p => (p.stock || 0) === 0);
+    const branchProducts = getProductsByBranch();
+    return branchProducts.filter(p => (p.stock || 0) === 0);
   };
 
   const getProductStockHistory = (productId: string) => {
@@ -124,6 +144,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     getLowStockProducts,
     getOutOfStockProducts,
     getProductStockHistory,
+    getProductsByBranch,
+    getTransactionsByBranch,
   };
 
   return (

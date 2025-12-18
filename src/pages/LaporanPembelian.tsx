@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { ReportsLayout } from "@/components/ReportsLayout";
 import { KPICard } from "@/components/KPICard";
 import { Card } from "@/components/ui/card";
@@ -36,6 +36,7 @@ import { format, isWithinInterval } from "date-fns";
 import { id } from "date-fns/locale";
 import { formatCurrency, exportToPDF, exportToExcel, printReport } from "@/utils/exportUtils";
 import { getStoredPurchases } from "@/lib/storage";
+import { useBranch } from "@/contexts/BranchContext";
 
 // Interface yang SAMA PERSIS dengan PurchaseManagement.tsx
 interface PurchaseItem {
@@ -57,6 +58,7 @@ interface Purchase {
   totalCost: number;
   createdBy: string;
   createdAt: string; // ISO timestamp
+  branchId?: string;
 }
 
 interface PurchaseReportData {
@@ -87,6 +89,7 @@ interface PurchaseReportData {
 }
 
 export default function LaporanPembelian() {
+  const { currentBranch } = useBranch();
   const [dateRange, setDateRange] = useState<DateRange>({
     startDate: new Date(new Date().setDate(new Date().getDate() - 30)),
     endDate: new Date(),
@@ -111,7 +114,7 @@ export default function LaporanPembelian() {
 
   useEffect(() => {
     loadReportData();
-  }, [dateRange, filterSupplier, filterItem]);
+  }, [dateRange, filterSupplier, filterItem, currentBranch]);
 
   const loadReportData = () => {
     console.log("=== DEBUG: Loading Purchase Report Data ===");
@@ -121,8 +124,15 @@ export default function LaporanPembelian() {
     console.log("Raw purchases from storage:", rawPurchases);
     console.log("Number of raw purchases:", rawPurchases.length);
     
-    // Cast ke tipe Purchase yang benar
-    const purchases: Purchase[] = rawPurchases as Purchase[];
+    // Cast ke tipe Purchase yang benar dan filter by branch
+    let purchases: Purchase[] = rawPurchases as Purchase[];
+    
+    // Filter by current branch
+    if (currentBranch) {
+      purchases = purchases.filter(p => p.branchId === currentBranch.id);
+      console.log(`Filtered by branch ${currentBranch.name}: ${purchases.length} purchases`);
+    }
+    
     console.log("Typed purchases:", purchases);
     
     if (purchases.length === 0) {
@@ -278,8 +288,14 @@ export default function LaporanPembelian() {
     console.log("=== Report Data Updated Successfully ===");
   };
 
-  // Get unique suppliers and items for filters
-  const allPurchases: Purchase[] = getStoredPurchases() as Purchase[];
+  // Get unique suppliers and items for filters (filtered by branch)
+  const allPurchases: Purchase[] = useMemo(() => {
+    const purchases = getStoredPurchases() as Purchase[];
+    return currentBranch 
+      ? purchases.filter(p => p.branchId === currentBranch.id)
+      : purchases;
+  }, [currentBranch]);
+
   const uniqueSuppliers = Array.from(new Set(allPurchases.map(p => p.supplier))).sort();
   const uniqueItems = Array.from(new Set(
     allPurchases.flatMap(p => p.items?.map(item => item.productName) || [])
@@ -339,6 +355,7 @@ export default function LaporanPembelian() {
             Subtotal: item.subtotal,
             "Total Biaya": p.totalCost,
             "Dibuat Oleh": p.createdBy,
+            Cabang: currentBranch?.name || 'N/A',
           });
         });
       }
@@ -360,6 +377,12 @@ export default function LaporanPembelian() {
       onPrint={handlePrint}
     >
       <div id="report-content" className="space-y-6">
+        {currentBranch && (
+          <p className="text-sm text-muted-foreground">
+            Cabang: {currentBranch.name}
+          </p>
+        )}
+
         {/* Filters */}
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-3">

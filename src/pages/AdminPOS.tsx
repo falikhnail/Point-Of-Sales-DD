@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApp } from '@/contexts/AppContext';
+import { useBranch } from '@/contexts/BranchContext';
 import Receipt from '@/components/Receipt';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,6 +29,7 @@ export default function AdminPOS() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { updateProductStock } = useApp();
+  const { currentBranch } = useBranch();
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<OrderItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,13 +44,21 @@ export default function AdminPOS() {
       return;
     }
 
-    const loadedProducts = getStoredProducts() as Product[];
-    setProducts(loadedProducts);
+    loadProducts();
+  }, [user, navigate, currentBranch]);
+
+  const loadProducts = () => {
+    const allProducts = getStoredProducts() as Product[];
+    // Filter products by current branch
+    const branchProducts = currentBranch 
+      ? allProducts.filter(p => p.branchId === currentBranch.id)
+      : allProducts;
+    setProducts(branchProducts);
     
-    if (loadedProducts.length === 0) {
+    if (branchProducts.length === 0) {
       toast.info('Belum ada produk. Silakan tambahkan produk di menu Kelola Menu.');
     }
-  }, [user, navigate]);
+  };
 
   const categories = ['all', ...Array.from(new Set(products.map(p => p.category)))];
 
@@ -160,6 +170,13 @@ export default function AdminPOS() {
       return;
     }
 
+    if (!currentBranch) {
+      toast.error('Tidak ada cabang aktif', {
+        description: 'Silakan pilih cabang terlebih dahulu.'
+      });
+      return;
+    }
+
     // Create cart items with cost information
     const cartItems = cart.map(item => ({
       ...item.product,
@@ -180,7 +197,8 @@ export default function AdminPOS() {
       cashierId: user?.id || '',
       date: new Date().toISOString().split('T')[0],
       timestamp: Date.now(),
-      status: 'completed'
+      status: 'completed',
+      branchId: currentBranch.id
     };
 
     saveTransaction(transaction);
@@ -196,13 +214,16 @@ export default function AdminPOS() {
         userRole: user.role,
         action: 'Menyelesaikan transaksi',
         actionType: 'transaction',
-        details: `Total: Rp ${calculateTotal().toLocaleString('id-ID')}, Metode: ${paymentMethod}, Jumlah item: ${totalItems}`
+        details: `Total: Rp ${calculateTotal().toLocaleString('id-ID')}, Metode: ${paymentMethod}, Jumlah item: ${totalItems}`,
+        branchId: currentBranch.id
       });
     }
 
-    const updatedProducts = products.map(product => {
+    // Update stock for all products in cart
+    const allProducts = getStoredProducts();
+    const updatedAllProducts = allProducts.map(product => {
       const cartItem = cart.find(item => item.product.id === product.id);
-      if (cartItem) {
+      if (cartItem && product.branchId === currentBranch.id) {
         const newStock = (product.stock || 0) - cartItem.quantity;
         
         // Update stock with history tracking
@@ -218,8 +239,12 @@ export default function AdminPOS() {
       }
       return product;
     });
-    setProducts(updatedProducts);
-    setStoredProducts(updatedProducts);
+    
+    setStoredProducts(updatedAllProducts);
+    
+    // Update local products state
+    const updatedBranchProducts = updatedAllProducts.filter(p => p.branchId === currentBranch.id);
+    setProducts(updatedBranchProducts);
 
     // Show receipt dialog instead of just toast
     setCurrentTransaction(transaction);
@@ -276,7 +301,10 @@ export default function AdminPOS() {
       <div className="max-w-7xl mx-auto">
         <div className="mb-4 lg:mb-6">
           <h1 className="text-2xl lg:text-3xl font-bold text-gray-800">POS Admin</h1>
-          <p className="text-xs lg:text-sm text-gray-600 mt-1">Sistem Point of Sale</p>
+          <p className="text-xs lg:text-sm text-gray-600 mt-1">
+            Sistem Point of Sale
+            {currentBranch && ` - ${currentBranch.name}`}
+          </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">

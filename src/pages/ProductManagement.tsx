@@ -27,6 +27,8 @@ import {
 } from '@/components/ui/select';
 import { Plus, Edit, Trash2, Package, AlertTriangle } from 'lucide-react';
 import { getStoredProducts, setStoredProducts, getFromStorage, setToStorage, STORAGE_KEYS } from '@/lib/storage';
+import { useBranch } from '@/contexts/BranchContext';
+import { toast } from 'sonner';
 
 interface Product {
   id: string;
@@ -38,6 +40,7 @@ interface Product {
   minStock: number;
   unit: string;
   description?: string;
+  branchId?: string;
 }
 
 interface StockHistoryEntry {
@@ -51,11 +54,13 @@ interface StockHistoryEntry {
   reason: string;
   date: string;
   userId: string;
+  branchId?: string;
 }
 
 const categories = ['Dimsum', 'Minuman', 'Snack', 'Paket'];
 
 export default function ProductManagement() {
+  const { currentBranch } = useBranch();
   const [products, setProductsState] = useState<Product[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -74,45 +79,28 @@ export default function ProductManagement() {
 
   useEffect(() => {
     loadProducts();
-  }, []);
+  }, [currentBranch]);
 
   const loadProducts = () => {
-    const loadedProducts = getStoredProducts();
-    if (loadedProducts.length === 0) {
-      // Initialize with default products
-      const defaultProducts: Product[] = [
-        {
-          id: '1',
-          name: 'Siomay Ayam',
-          category: 'Dimsum',
-          price: 15000,
-          cost: 8000,
-          stock: 50,
-          minStock: 10,
-          unit: 'pcs',
-          description: 'Siomay ayam original',
-        },
-        {
-          id: '2',
-          name: 'Hakao',
-          category: 'Dimsum',
-          price: 18000,
-          cost: 10000,
-          stock: 40,
-          minStock: 10,
-          unit: 'pcs',
-          description: 'Hakao udang segar',
-        },
-      ];
-      setStoredProducts(defaultProducts);
-      setProductsState(defaultProducts);
-    } else {
-      setProductsState(loadedProducts);
-    }
+    const allProducts = getStoredProducts();
+    // Filter products by current branch
+    const branchProducts = currentBranch 
+      ? allProducts.filter(p => p.branchId === currentBranch.id)
+      : allProducts;
+    setProductsState(branchProducts);
   };
 
   const saveProducts = (updatedProducts: Product[]) => {
-    setStoredProducts(updatedProducts);
+    // Get all products from storage
+    const allProducts = getStoredProducts();
+    
+    // Remove old products from current branch
+    const otherBranchProducts = allProducts.filter(p => p.branchId !== currentBranch?.id);
+    
+    // Combine with updated products
+    const finalProducts = [...otherBranchProducts, ...updatedProducts];
+    
+    setStoredProducts(finalProducts);
     setProductsState(updatedProducts);
   };
 
@@ -131,12 +119,20 @@ export default function ProductManagement() {
       id: Date.now().toString(),
       date: new Date().toISOString(),
       userId: 'admin',
+      branchId: currentBranch?.id,
     };
     setStockHistory([...history, newEntry]);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!currentBranch) {
+      toast.error('Tidak ada cabang aktif', {
+        description: 'Silakan pilih cabang terlebih dahulu.'
+      });
+      return;
+    }
 
     const productData: Product = {
       id: editingProduct?.id || Date.now().toString(),
@@ -148,6 +144,7 @@ export default function ProductManagement() {
       minStock: parseFloat(formData.minStock),
       unit: formData.unit,
       description: formData.description,
+      branchId: currentBranch.id,
     };
 
     let updatedProducts: Product[];
@@ -168,6 +165,10 @@ export default function ProductManagement() {
           reason: 'Manual stock adjustment',
         });
       }
+      
+      toast.success('Produk diperbarui', {
+        description: `${productData.name} berhasil diperbarui.`
+      });
     } else {
       updatedProducts = [...products, productData];
       addStockHistory({
@@ -178,6 +179,10 @@ export default function ProductManagement() {
         previousStock: 0,
         newStock: productData.stock,
         reason: 'Initial stock',
+      });
+      
+      toast.success('Produk ditambahkan', {
+        description: `${productData.name} berhasil ditambahkan ke ${currentBranch.name}.`
       });
     }
 
@@ -202,9 +207,13 @@ export default function ProductManagement() {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('Apakah Anda yakin ingin menghapus produk ini?')) {
+    const product = products.find(p => p.id === id);
+    if (confirm(`Apakah Anda yakin ingin menghapus produk ${product?.name}?`)) {
       const updatedProducts = products.filter((p) => p.id !== id);
       saveProducts(updatedProducts);
+      toast.success('Produk dihapus', {
+        description: `${product?.name} berhasil dihapus.`
+      });
     }
   };
 
@@ -236,7 +245,14 @@ export default function ProductManagement() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Manajemen Produk</h1>
+        <div>
+          <h1 className="text-3xl font-bold">Manajemen Produk</h1>
+          {currentBranch && (
+            <p className="text-sm text-muted-foreground mt-1">
+              Cabang: {currentBranch.name}
+            </p>
+          )}
+        </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={resetForm}>

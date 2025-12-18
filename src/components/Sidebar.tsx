@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, ShoppingCart, FileText, Package, Users, LogOut, DollarSign, Activity, Clock, Briefcase, TrendingUp, TrendingDown, Wallet, ShoppingBag, Database } from 'lucide-react';
+import { Home, ShoppingCart, FileText, Package, Users, LogOut, DollarSign, Activity, Clock, Briefcase, TrendingUp, TrendingDown, Wallet, ShoppingBag, Database, Store, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import BranchSelector from './BranchSelector';
 
 export default function Sidebar() {
   const location = useLocation();
@@ -10,10 +11,12 @@ export default function Sidebar() {
 
   const menuItems = [
     { path: '/admin/dashboard', icon: Home, label: 'Dashboard' },
+    { path: '/admin/multi-branch', icon: BarChart3, label: 'Multi Cabang' },
     { path: '/admin/pos', icon: ShoppingCart, label: 'POS' },
     { path: '/admin/products', icon: Package, label: 'Manajemen Produk' },
     { path: '/admin/purchases', icon: ShoppingBag, label: 'Pembelian' },
     { path: '/admin/users', icon: Users, label: 'User Management' },
+    { path: '/admin/branches', icon: Store, label: 'Manajemen Cabang' },
     { path: '/admin/shifts', icon: Clock, label: 'Shift Management' },
     { path: '/admin/operational-costs', icon: Briefcase, label: 'Biaya Operasional' },
     { path: '/admin/activity-log', icon: FileText, label: 'Activity Log' },
@@ -35,9 +38,12 @@ export default function Sidebar() {
       <div className="p-6 border-b border-gray-700">
         <h1 className="text-2xl font-bold">Dimsum POS</h1>
         <p className="text-sm text-gray-400 mt-1">{user?.username}</p>
+        <div className="mt-4">
+          <BranchSelector />
+        </div>
       </div>
 
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {menuItems.map((item) => (
           <Link
             key={item.path}

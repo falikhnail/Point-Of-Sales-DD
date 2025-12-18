@@ -14,6 +14,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { getStoredTransactions } from '@/lib/storage';
+import { useBranch } from '@/contexts/BranchContext';
 import { Transaction } from '@/types';
 
 type SortField = 'date' | 'total' | 'paymentMethod' | 'cashierName';
@@ -28,6 +29,7 @@ const PAYMENT_COLORS = {
 };
 
 export default function LaporanPenjualan() {
+  const { currentBranch } = useBranch();
   const [dateFrom, setDateFrom] = useState<Date>();
   const [dateTo, setDateTo] = useState<Date>();
   const [sortField, setSortField] = useState<SortField>('date');
@@ -35,15 +37,19 @@ export default function LaporanPenjualan() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Load transactions from centralized storage utility
+  // Load transactions from centralized storage utility and filter by branch
   const allTransactions: Transaction[] = useMemo(() => {
     try {
-      return getStoredTransactions() as Transaction[];
+      const transactions = getStoredTransactions() as Transaction[];
+      // Filter by current branch
+      return currentBranch 
+        ? transactions.filter(t => t.branchId === currentBranch.id)
+        : transactions;
     } catch (error) {
       console.error('Error loading transactions:', error);
       return [];
     }
-  }, []);
+  }, [currentBranch]);
 
   // Filter transactions by date range
   const filteredTransactions = useMemo(() => {
@@ -152,19 +158,26 @@ export default function LaporanPenjualan() {
     doc.setFontSize(18);
     doc.text('Laporan Penjualan', 14, 20);
     
+    // Branch info
+    if (currentBranch) {
+      doc.setFontSize(11);
+      doc.text(`Cabang: ${currentBranch.name}`, 14, 28);
+    }
+    
     // Date range
     doc.setFontSize(11);
     const dateRange = `Periode: ${dateFrom ? format(dateFrom, 'dd MMM yyyy', { locale: id }) : 'Semua'} - ${dateTo ? format(dateTo, 'dd MMM yyyy', { locale: id }) : 'Semua'}`;
-    doc.text(dateRange, 14, 28);
+    doc.text(dateRange, 14, currentBranch ? 34 : 28);
     
     // Summary
+    const summaryY = currentBranch ? 42 : 36;
     doc.setFontSize(10);
-    doc.text(`Total Penjualan: Rp ${totalSales.toLocaleString('id-ID')}`, 14, 36);
-    doc.text(`Jumlah Transaksi: ${totalTransactions}`, 14, 42);
-    doc.text(`Rata-rata Transaksi: Rp ${averageTransaction.toLocaleString('id-ID')}`, 14, 48);
+    doc.text(`Total Penjualan: Rp ${totalSales.toLocaleString('id-ID')}`, 14, summaryY);
+    doc.text(`Jumlah Transaksi: ${totalTransactions}`, 14, summaryY + 6);
+    doc.text(`Rata-rata Transaksi: Rp ${averageTransaction.toLocaleString('id-ID')}`, 14, summaryY + 12);
     
     // Payment methods
-    let yPos = 56;
+    let yPos = summaryY + 20;
     doc.text('Metode Pembayaran:', 14, yPos);
     paymentMethodStats.forEach((method) => {
       yPos += 6;
@@ -192,6 +205,7 @@ export default function LaporanPenjualan() {
       Total: t.total,
       'Metode Pembayaran': t.paymentMethod || 'Cash',
       Kasir: t.cashierName || 'Unknown',
+      Cabang: currentBranch?.name || 'N/A',
     }));
 
     const ws = XLSX.utils.json_to_sheet(data);
@@ -222,7 +236,14 @@ export default function LaporanPenjualan() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Laporan Penjualan</h1>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Laporan Penjualan</h1>
+          {currentBranch && (
+            <p className="text-sm text-muted-foreground mt-1">
+              Cabang: {currentBranch.name}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Date Filter */}

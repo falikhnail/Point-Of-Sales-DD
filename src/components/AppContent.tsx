@@ -16,6 +16,8 @@ import AdminActivityLog from '../pages/AdminActivityLog';
 import AdminShiftManagement from '../pages/AdminShiftManagement';
 import AdminOperationalCosts from '../pages/AdminOperationalCosts';
 import AdminBackup from '../pages/AdminBackup';
+import BranchManagement from '../pages/BranchManagement';
+import MultiBranchDashboard from '../pages/MultiBranchDashboard';
 import CashierDashboard from '../pages/CashierDashboard';
 import PurchaseManagement from '../pages/PurchaseManagement';
 import Sidebar from './Sidebar';
@@ -47,10 +49,12 @@ export default function AppContent() {
       <div className="flex-1 overflow-auto">
         <Routes>
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/multi-branch" element={<MultiBranchDashboard />} />
           <Route path="/admin/pos" element={<AdminPOS />} />
           <Route path="/admin/products" element={<ProductManagement />} />
           <Route path="/admin/purchases" element={<PurchaseManagement />} />
           <Route path="/admin/users" element={<AdminUserManagement />} />
+          <Route path="/admin/branches" element={<BranchManagement />} />
           <Route path="/admin/shifts" element={<AdminShiftManagement />} />
           <Route path="/admin/operational-costs" element={<AdminOperationalCosts />} />
           <Route path="/admin/cashier-reports" element={<AdminCashierReports />} />

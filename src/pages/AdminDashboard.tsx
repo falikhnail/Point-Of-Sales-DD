@@ -4,6 +4,7 @@ import { KPICard } from "@/components/KPICard";
 import { DollarSign, ShoppingCart, Package, TrendingUp, Clock } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
 import { getStoredTransactions, getStoredProducts, getStoredShifts } from "@/lib/storage";
+import { useBranch } from "@/contexts/BranchContext";
 import { format, startOfDay, endOfDay, subDays, isWithinInterval } from "date-fns";
 import { Product } from "@/types";
 
@@ -23,6 +24,7 @@ interface Transaction {
   date: string;
   total: number;
   items?: TransactionItem[];
+  branchId?: string;
 }
 
 interface TransactionItem {
@@ -38,6 +40,7 @@ interface Shift {
   cashierId: string;
   startTime: string;
   endTime?: string;
+  branchId?: string;
 }
 
 interface ChartDataPoint {
@@ -58,6 +61,7 @@ interface CategoryData {
 }
 
 export default function AdminDashboard() {
+  const { currentBranch } = useBranch();
   const [stats, setStats] = useState<DashboardStats>({
     totalRevenue: 0,
     totalOrders: 0,
@@ -78,12 +82,23 @@ export default function AdminDashboard() {
   useEffect(() => {
     calculateStats();
     prepareChartData();
-  }, []);
+  }, [currentBranch]);
 
   const calculateStats = () => {
-    const transactions = getStoredTransactions() as Transaction[];
-    const products = getStoredProducts();
-    const shifts = getStoredShifts() as Shift[];
+    const allTransactions = getStoredTransactions() as Transaction[];
+    const allProducts = getStoredProducts();
+    const allShifts = getStoredShifts() as Shift[];
+
+    // Filter by current branch
+    const transactions = currentBranch 
+      ? allTransactions.filter(t => t.branchId === currentBranch.id)
+      : allTransactions;
+    const products = currentBranch 
+      ? allProducts.filter(p => p.branchId === currentBranch.id)
+      : allProducts;
+    const shifts = currentBranch 
+      ? allShifts.filter(s => s.branchId === currentBranch.id)
+      : allShifts;
 
     const today = new Date();
     const todayStart = startOfDay(today);
@@ -132,8 +147,16 @@ export default function AdminDashboard() {
   };
 
   const prepareChartData = () => {
-    const transactions = getStoredTransactions() as Transaction[];
-    const products = getStoredProducts();
+    const allTransactions = getStoredTransactions() as Transaction[];
+    const allProducts = getStoredProducts();
+
+    // Filter by current branch
+    const transactions = currentBranch 
+      ? allTransactions.filter(t => t.branchId === currentBranch.id)
+      : allTransactions;
+    const products = currentBranch 
+      ? allProducts.filter(p => p.branchId === currentBranch.id)
+      : allProducts;
 
     // Prepare daily revenue data for the last 7 days
     const last7Days = Array.from({ length: 7 }, (_, i) => {
@@ -208,7 +231,10 @@ export default function AdminDashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">Overview of your restaurant's performance</p>
+        <p className="text-muted-foreground">
+          Overview of your restaurant's performance
+          {currentBranch && ` - ${currentBranch.name}`}
+        </p>
       </div>
 
       {/* KPI Cards */}
