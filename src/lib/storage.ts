@@ -63,10 +63,10 @@ export const removeFromStorage = (key: string): void => {
 
 // Helper function to normalize product categories
 const normalizeProduct = (product: Product): Product => {
-  const validCategories = ['kukus', 'goreng', 'bakar', 'lainnya'];
+  const validCategories = ['kukus', 'mentai', 'bakar', 'nuget', 'pisang', 'corndog'];
   return {
     ...product,
-    category: validCategories.includes(product.category) ? product.category : 'lainnya',
+    category: validCategories.includes(product.category) ? product.category : 'kukus',
   };
 };
 

@@ -59,7 +59,7 @@ export default function PurchaseManagement() {
 
   // Load purchases from localStorage
   useEffect(() => {
-    const storedPurchases = localStorage.getItem("purchases");
+    const storedPurchases = localStorage.getItem("dimsum_purchases");
     if (storedPurchases) {
       const allPurchases = JSON.parse(storedPurchases);
       // Filter by current branch
@@ -220,10 +220,10 @@ export default function PurchaseManagement() {
     setProducts(branchProducts);
 
     // Save purchase to localStorage
-    const storedPurchases = localStorage.getItem("purchases");
+    const storedPurchases = localStorage.getItem("dimsum_purchases");
     const allPurchases = storedPurchases ? JSON.parse(storedPurchases) : [];
     const updatedPurchases = [...allPurchases, newPurchase];
-    localStorage.setItem("purchases", JSON.stringify(updatedPurchases));
+    localStorage.setItem("dimsum_purchases", JSON.stringify(updatedPurchases));
 
     // Update local state with branch-filtered purchases
     const branchPurchases = updatedPurchases.filter(
@@ -245,7 +245,7 @@ export default function PurchaseManagement() {
   };
 
   const deletePurchase = (purchaseId: string) => {
-    const storedPurchases = localStorage.getItem("purchases");
+    const storedPurchases = localStorage.getItem("dimsum_purchases");
     if (!storedPurchases) return;
 
     const allPurchases: Purchase[] = JSON.parse(storedPurchases);
@@ -276,7 +276,7 @@ export default function PurchaseManagement() {
 
     // Remove purchase
     const updatedPurchases = allPurchases.filter((p) => p.id !== purchaseId);
-    localStorage.setItem("purchases", JSON.stringify(updatedPurchases));
+    localStorage.setItem("dimsum_purchases", JSON.stringify(updatedPurchases));
 
     // Update local state
     const branchPurchases = currentBranch

@@ -1,4 +1,4 @@
-export type CategoryKey = 'kukus' | 'goreng' | 'bakar' | 'lainnya';
+export type CategoryKey = 'kukus' | 'mentai' | 'bakar' | 'nuget' | 'pisang' | 'corndog';
 
 export interface Product {
   id: string;
